@@ -18,9 +18,9 @@ class AtOrWakeCommandFilter(filter.CustomFilter):
 
 @register(
     "astrbot_plugin_llm_blocker",
-    "YourName",
+    "xiaoxi2760",
     "按群禁用默认LLM聊天，其他插件不受影响",
-    "1.0.0",
+    "v1.1.0",
 )
 class LLMBlocker(Star):
     def __init__(
@@ -39,6 +39,8 @@ class LLMBlocker(Star):
         )
         self.blocked_groups: set[str] = set()
         self.strong_mode: bool = False
+        # 管理员豁免：开启后 AstrBot 配置的管理员（bot 主）在被禁群内仍可正常与 LLM 对话
+        self.exempt_admin: bool = True
         if self.config is not None:
             # 面板配置是唯一数据源
             self.blocked_groups = {
@@ -47,6 +49,7 @@ class LLMBlocker(Star):
                 if str(i).strip()
             }
             self.strong_mode = bool(self.config.get("strong_mode", False))
+            self.exempt_admin = bool(self.config.get("exempt_admin", True))
             self._migrate_legacy_file()
         else:
             self._load_legacy_file()
@@ -76,6 +79,7 @@ class LLMBlocker(Star):
                 str(i).strip() for i in groups if str(i).strip()
             }
             self.strong_mode = bool(data.get("strong_mode", False))
+            self.exempt_admin = bool(data.get("exempt_admin", True))
 
     def _migrate_legacy_file(self) -> None:
         """旧版独立数据文件 -> 面板配置，一次性合并（群取并集、强力模式取或），
@@ -121,6 +125,7 @@ class LLMBlocker(Star):
             try:
                 self.config["blocked_groups"] = sorted(self.blocked_groups)
                 self.config["strong_mode"] = self.strong_mode
+                self.config["exempt_admin"] = self.exempt_admin
                 save = getattr(self.config, "save_config", None)
                 if callable(save):
                     save()
@@ -132,6 +137,7 @@ class LLMBlocker(Star):
             data = {
                 "blocked_groups": sorted(self.blocked_groups),
                 "strong_mode": self.strong_mode,
+                "exempt_admin": self.exempt_admin,
             }
             with open(self.config_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
@@ -207,6 +213,25 @@ class LLMBlocker(Star):
         )
         yield event.plain_result(f"强力模式{state}{extra}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("exemptadmin")
+    async def toggle_exempt_admin(self, event: AstrMessageEvent, arg: str = ""):
+        arg = arg.strip().lower()
+        if arg in ("on", "1", "true", "开", "启用"):
+            self.exempt_admin = True
+        elif arg in ("off", "0", "false", "关", "关闭"):
+            self.exempt_admin = False
+        else:
+            self.exempt_admin = not self.exempt_admin  # 无参数则切换
+        self._persist()
+        state = "已开启" if self.exempt_admin else "已关闭"
+        extra = (
+            "：被禁群内 AstrBot 配置的管理员（bot 主）发消息仍可正常与 LLM 对话"
+            if self.exempt_admin
+            else "：被禁群内管理员也会被拦截，与普通成员一致"
+        )
+        yield event.plain_result(f"管理员豁免{state}{extra}")
+
     # ------------------------------------------------------------------
     # 核心1：只拦默认 LLM，不终止事件、不影响其他插件
     # ------------------------------------------------------------------
@@ -215,6 +240,9 @@ class LLMBlocker(Star):
     async def suppress_default_llm(self, event: AstrMessageEvent):
         gid = str(event.get_group_id() or "").strip()
         if gid and gid in self.blocked_groups:
+            # 管理员豁免：bot 主在被禁群内仍可正常对话
+            if self.exempt_admin and event.is_admin():
+                return
             # 只会阻止 AstrBot 默认的 LLM 请求链路，不会阻止插件中的 LLM 请求。
             event.should_call_llm(True)
         yield
@@ -228,4 +256,7 @@ class LLMBlocker(Star):
             return
         gid = str(event.get_group_id() or "").strip()
         if gid and gid in self.blocked_groups:
+            # 管理员豁免：bot 主在被禁群内仍可正常对话
+            if self.exempt_admin and event.is_admin():
+                return
             event.stop_event()

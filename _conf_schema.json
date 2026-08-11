@@ -1,4 +1,10 @@
 {
+  "exempt_admin": {
+    "description": "管理员豁免",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后，被禁群内 AstrBot 配置的管理员（bot 主）发消息仍可正常与 LLM 对话；关闭则管理员也会被拦截。也可在群内用 /exemptadmin 切换，改动会同步到这里。"
+  },
   "strong_mode": {
     "description": "强力模式",
     "type": "bool",
