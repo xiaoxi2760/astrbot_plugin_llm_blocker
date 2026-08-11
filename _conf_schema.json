@@ -1,0 +1,14 @@
+{
+  "strong_mode": {
+    "description": "强力模式",
+    "type": "bool",
+    "default": false,
+    "hint": "开启后，被禁群内任何 LLM 请求（含插件发起）都会被拦截；关闭则只拦截默认 LLM 聊天。也可在群内用 /strongllmblock 切换，改动会同步到这里。"
+  },
+  "blocked_groups": {
+    "description": "已禁用 LLM 的群列表",
+    "type": "list",
+    "default": [],
+    "hint": "每行填一个 QQ 群号。也可在群内用 /blockllm、/unblockllm 管理，改动会同步到这里。面板保存后插件自动热重载生效。"
+  }
+}
