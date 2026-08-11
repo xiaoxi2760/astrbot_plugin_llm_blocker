@@ -25,3 +25,8 @@ desc: |
 version: 1.0.0
 author: xiaoxi2760
 repo: https://github.com/xiaoxi2760/astrbot_plugin_llm_blocker
+tags:
+  - llm
+  - 屏蔽
+  - 禁用
+  - 群聊
