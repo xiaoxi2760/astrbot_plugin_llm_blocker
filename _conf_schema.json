@@ -1,20 +1,40 @@
 {
+  "mode": {
+    "description": "拦截模式",
+    "type": "string",
+    "default": "blacklist",
+    "options": ["blacklist", "whitelist"],
+    "labels": ["黑名单模式（仅禁用名单内的群/用户）", "白名单模式（仅放行名单内的群/用户）"],
+    "hint": "黑名单：仅禁用名单内的群/用户；白名单：仅放行名单内的群/用户，其余全部禁用。也可在群内用 /llmblockmode 切换，改动会同步到这里。"
+  },
   "exempt_admin": {
     "description": "管理员豁免",
     "type": "bool",
     "default": true,
-    "hint": "开启后，被禁群内 AstrBot 配置的管理员（bot 主）发消息仍可正常与 LLM 对话；关闭则管理员也会被拦截。也可在群内用 /exemptadmin 切换，改动会同步到这里。"
+    "hint": "开启后，拦截范围内 AstrBot 配置的管理员（bot 主）发消息仍可正常与 LLM 对话；关闭则管理员也会被拦截。也可在群内用 /exemptadmin 切换，改动会同步到这里。"
   },
   "strong_mode": {
     "description": "强力模式",
     "type": "bool",
     "default": false,
-    "hint": "开启后，被禁群内任何 LLM 请求（含插件发起）都会被拦截；关闭则只拦截默认 LLM 聊天。也可在群内用 /strongllmblock 切换，改动会同步到这里。"
+    "hint": "开启后，拦截范围内任何 LLM 请求（含插件发起）都会被拦截；关闭则只拦截默认 LLM 聊天。也可在群内用 /strongllmblock 切换，改动会同步到这里。"
+  },
+  "block_private_all": {
+    "description": "全局禁用私聊 LLM",
+    "type": "bool",
+    "default": false,
+    "hint": "开启后，所有私聊（单独聊天）的 LLM 均被禁用（黑名单模式有效；白名单模式下私聊默认已禁用）。管理员豁免开启时 bot 主仍可对话。"
   },
   "blocked_groups": {
-    "description": "已禁用 LLM 的群列表",
+    "description": "已禁用/已放行 LLM 的群列表",
     "type": "list",
     "default": [],
-    "hint": "每行填一个 QQ 群号。也可在群内用 /blockllm、/unblockllm 管理，改动会同步到这里。面板保存后插件自动热重载生效。"
+    "hint": "每行填一个群号。黑名单模式下这些群的 LLM 被禁用；白名单模式下这些群的 LLM 被放行。也可在群内用 /blockllm、/unblockllm 管理，改动会同步到这里。"
+  },
+  "blocked_users": {
+    "description": "已禁用/已放行私聊 LLM 的用户列表",
+    "type": "list",
+    "default": [],
+    "hint": "每行填一个用户 ID（私聊机器人发送 /sid 可查看自己的 ID）。黑名单模式下这些用户的私聊 LLM 被禁用；白名单模式下这些用户的私聊 LLM 被放行。也可用 /blockllmuser、/unblockllmuser 管理，改动会同步到这里。"
   }
 }

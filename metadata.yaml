@@ -1,35 +1,42 @@
 name: astrbot_plugin_llm_blocker
 display_name: LLM屏蔽助手
-short_desc: 按群禁用默认LLM聊天，其他插件不受影响
+short_desc: 按群/按用户禁用LLM聊天，支持黑白名单模式，其他插件不受影响
 desc: |
-  在指定群聊中禁用 AstrBot 的 LLM 聊天响应，但保留其他插件功能（指令、正则响应等）正常工作。
+  在指定群聊或私聊（单独聊天）中禁用 AstrBot 的 LLM 聊天响应，但保留其他插件功能（指令、正则响应等）正常工作。
 
-  管理员指令（需 @ 机器人或唤醒前缀；直接输群号即可生效，私聊机器人发送最方便）：
+  管理员指令（需 @ 机器人或唤醒前缀；直接输群号/用户ID即可生效，私聊机器人发送最方便）：
   - `/blockllm`：禁用当前群的 LLM 聊天；`/blockllm <群号>` 指定群
   - `/unblockllm`：恢复当前群；`/unblockllm <群号>` 指定群
-  - `/listblockllm`：查看已禁用 LLM 的群列表
+  - `/blockllmuser`：禁用当前私聊用户的 LLM；`/blockllmuser <用户ID>` 指定用户
+  - `/unblockllmuser`：恢复当前私聊用户；`/unblockllmuser <用户ID>` 指定用户
+  - `/llmblockmode [blacklist|whitelist]`：切换黑白名单模式（无参数则切换；也支持中文「黑名单/白名单」）
+  - `/listblockllm`：查看当前模式、名单及各项开关状态
   - `/strongllmblock [on|off]`：开关强力模式（无参数则切换）
   - `/exemptadmin [on|off]`：开关管理员豁免（无参数则切换）
 
   模式说明：
-  - 默认模式：仅拦截 AstrBot 默认 LLM 聊天；插件发起的 LLM 请求不受影响，其他插件照常工作。
+  - 黑名单模式（默认）：仅拦截名单内的群/用户；其余全部正常。
+  - 白名单模式：仅放行名单内的群/用户；其余全部禁用（包括所有私聊）。切换时空名单会提示风险。
+  - 全局禁用私聊：`block_private_all` 开启后所有私聊 LLM 均被禁用（黑名单模式有效；白名单模式下私聊默认已禁用）。
+  - 默认模式（黑名单且未开全局私聊、未开强力模式）：仅拦截 AstrBot 默认 LLM 聊天；插件发起的 LLM 请求不受影响，其他插件照常工作。
   - 强力模式：额外拦截「经 AstrBot 管线发起」的插件 LLM 请求（插件 handler yield ProviderRequest 的场景）。
     注意：插件在自身代码中直接调用 provider API 的请求不经过管线，两种模式都无法拦截
     （此类请求需在该插件自身配置或 AstrBot 会话管理中按群禁用对应插件）。
-  - 管理员豁免（默认开启）：被禁群内 AstrBot 配置的管理员（bot 主）发消息仍可正常与 LLM 对话；
+  - 管理员豁免（默认开启）：拦截范围内 AstrBot 配置的管理员（bot 主）发消息仍可正常与 LLM 对话；
     关闭后管理员也会被拦截。两个拦截钩子都生效。
 
-  实现方式：默认模式调用 `event.should_call_llm(True)`，仅阻止默认 LLM 请求链路，
+  实现方式：默认拦截调用 `event.should_call_llm(True)`，仅阻止默认 LLM 请求链路，
   不影响其他插件、不终止事件；强力模式额外通过 `on_llm_request` 钩子 `stop_event()`
-  拦截该群所有 LLM 请求。
+  拦截所有 LLM 请求。
 
-  所有配置（屏蔽群列表、强力模式、管理员豁免）均可在管理面板「插件管理 → 配置」中直接修改，
-  保存后自动热重载生效；聊天指令的改动也会实时同步到面板配置。
-version: v1.1.0
+  所有配置（拦截模式、屏蔽群/用户列表、全局禁用私聊、强力模式、管理员豁免）均可在管理面板
+  「插件管理 → 配置」中直接修改，保存后自动热重载生效；聊天指令的改动也会实时同步到面板配置。
+version: v1.2.0
 author: xiaoxi2760
 repo: https://github.com/xiaoxi2760/astrbot_plugin_llm_blocker
 tags:
   - llm
   - 屏蔽
   - 禁用
+  - 私聊
   - 群聊
