@@ -24,7 +24,7 @@ class AtOrWakeCommandFilter(filter.CustomFilter):
     "astrbot_plugin_llm_blocker",
     "xiaoxi2760",
     "按群/按用户禁用LLM聊天（支持黑白名单模式），其他插件不受影响",
-    "v1.2.0",
+    "v1.2.1",
 )
 class LLMBlocker(Star):
     def __init__(
@@ -203,6 +203,7 @@ class LLMBlocker(Star):
     @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("blockllm")
     async def block_llm(self, event: AstrMessageEvent, group_id: str = ""):
+        """禁用指定群的 LLM 聊天（黑名单模式）/ 将群加入白名单（白名单模式）。"""
         gid = group_id.strip() or str(event.get_group_id() or "").strip()
         if not gid:
             yield event.plain_result(
@@ -226,6 +227,7 @@ class LLMBlocker(Star):
     @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("unblockllm")
     async def unblock_llm(self, event: AstrMessageEvent, group_id: str = ""):
+        """恢复指定群的 LLM 聊天（黑名单模式）/ 将群移出白名单（白名单模式）。"""
         gid = group_id.strip() or str(event.get_group_id() or "").strip()
         if not gid:
             yield event.plain_result(
@@ -245,6 +247,7 @@ class LLMBlocker(Star):
     @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("blockllmuser")
     async def block_llm_user(self, event: AstrMessageEvent, user_id: str = ""):
+        """禁用指定用户的私聊 LLM（黑名单模式）/ 将用户加入白名单（白名单模式）。"""
         uid = user_id.strip()
         if not uid and event.is_private_chat():
             # 私聊中无参数 = 禁用当前用户
@@ -268,6 +271,7 @@ class LLMBlocker(Star):
     @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("unblockllmuser")
     async def unblock_llm_user(self, event: AstrMessageEvent, user_id: str = ""):
+        """恢复指定用户的私聊 LLM（黑名单模式）/ 将用户移出白名单（白名单模式）。"""
         uid = user_id.strip()
         if not uid and event.is_private_chat():
             uid = str(event.get_sender_id() or "").strip()
@@ -289,6 +293,7 @@ class LLMBlocker(Star):
     @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("listblockllm")
     async def list_blocked(self, event: AstrMessageEvent):
+        """查看当前拦截模式、名单与各项开关状态。"""
         mode = "白名单（仅放行名单内）" if self._is_whitelist() else "黑名单（仅禁用名单内）"
         strong = "开" if self.strong_mode else "关"
         exempt = "开" if self.exempt_admin else "关"
@@ -313,6 +318,7 @@ class LLMBlocker(Star):
     @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("llmblockmode")
     async def toggle_mode(self, event: AstrMessageEvent, arg: str = ""):
+        """切换黑名单/白名单拦截模式（无参数则切换）。"""
         arg = arg.strip().lower()
         if arg in ("blacklist", "黑名单"):
             self.mode = MODE_BLACKLIST
@@ -336,6 +342,7 @@ class LLMBlocker(Star):
     @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("strongllmblock")
     async def toggle_strong(self, event: AstrMessageEvent, arg: str = ""):
+        """开关强力模式（无参数则切换）：开启后拦截范围内经管线的插件 LLM 请求也会被拦截。"""
         arg = arg.strip().lower()
         if arg in ("on", "1", "true", "开", "启用"):
             self.strong_mode = True
@@ -356,6 +363,7 @@ class LLMBlocker(Star):
     @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("exemptadmin")
     async def toggle_exempt_admin(self, event: AstrMessageEvent, arg: str = ""):
+        """开关管理员豁免（无参数则切换）：开启后拦截范围内 bot 主仍可正常对话。"""
         arg = arg.strip().lower()
         if arg in ("on", "1", "true", "开", "启用"):
             self.exempt_admin = True
@@ -381,6 +389,7 @@ class LLMBlocker(Star):
     )
     @filter.custom_filter(AtOrWakeCommandFilter)
     async def suppress_default_llm(self, event: AstrMessageEvent):
+        """消息事件监听（群聊+私聊）：拦截范围内阻止默认 LLM 请求链路，不终止事件、不影响其他插件。"""
         if self._is_llm_blocked(event):
             # 管理员豁免：bot 主在拦截范围内仍可正常对话
             if self.exempt_admin and event.is_admin():
@@ -394,6 +403,7 @@ class LLMBlocker(Star):
     # ------------------------------------------------------------------
     @filter.on_llm_request()
     async def strong_block_llm(self, event: AstrMessageEvent, req):
+        """on_llm_request 钩子：强力模式下拦截范围内所有经管线的 LLM 请求（含插件发起）。"""
         if not self.strong_mode:
             return
         if self._is_llm_blocked(event):
